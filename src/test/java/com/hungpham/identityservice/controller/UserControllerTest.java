@@ -29,7 +29,6 @@ import java.time.LocalDate;
 @TestPropertySource("/test.properties")
 public class UserControllerTest {
 
-    // mockMvc gọi tới api của mình
     @Autowired
     private MockMvc mockMvc;
 
@@ -40,7 +39,6 @@ public class UserControllerTest {
     private UserResponse userResponse;
     private LocalDate dob;
 
-    // chay method nay truoc khi test
     @BeforeEach
     void initData() {
         dob = LocalDate.of(1990, 1, 1);
@@ -97,5 +95,3 @@ public class UserControllerTest {
                 .andExpect(MockMvcResultMatchers.jsonPath("message").value("Username must be at least 4 characters"));
     }
 }
-
-// unit test là mình biết được input và output sau khi chạy thì output đúng như mong muốn

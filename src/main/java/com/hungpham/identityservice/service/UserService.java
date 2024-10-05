@@ -101,20 +101,13 @@ public class UserService {
         userRepository.deleteById(userId);
     }
 
-    // kiem tra vai tro nguoi dung hien tai co phai la ADMIN khong, phai thi cho thuc thi ko tra ve 403
-    // hasRole sẽ mặc định thêm prefix ROLE_, thực tế là đang kiểm tra ROLE_ADMIN
-//    @PreAuthorize("hasRole('ADMIN')")
-    // hasRole sẽ tìm những thằng nào có prefix là ROLE_ + ADMIN
     @PreAuthorize("hasAuthority('APPROVE_DATA')")
-    // Map đúng từng authority
     public List<UserResponse> getUsers() {
         log.info("In method get Users");
         return userRepository.findAll().stream()
                 .map(userMapper::toUserResponse).toList();
     }
 
-    // PostAuthorize se get user tu user id
-    // @PostAuthorize(("hasRole('ADMIN')"))
     @PostAuthorize("returnObject.username == authentication.name")
     public UserResponse getUser(String id){
         log.info("In method get user by id");

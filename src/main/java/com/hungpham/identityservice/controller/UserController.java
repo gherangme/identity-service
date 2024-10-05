@@ -22,13 +22,8 @@ import java.util.List;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 @Slf4j
 public class UserController {
-    // dùng RequiredArgsConstructor FieldDefaults
-    // nó sẽ tự động đưa những cái final này vào constructor và inject dependency này vào
     UserService userService;
 
-    // RequestBody: map data tu body vao object UserCreationRequest
-    // Khai báo endpoint là users method là post
-    // Kiến trúc three layer: controller gọi xuống service -> service gọi xuống repository
     @PostMapping
     ApiResponse<UserResponse> createUser(@RequestBody @Valid UserCreationRequest request) {
         log.info("Controller: create user");
@@ -67,7 +62,6 @@ public class UserController {
                 .build();
     }
 
-    // nhan vao 1 param
     @GetMapping("/my-info")
     ApiResponse<UserResponse> getMyInfo(){
         return ApiResponse.<UserResponse>builder()

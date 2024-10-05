@@ -33,7 +33,6 @@ import java.time.LocalDate;
 @Testcontainers
 public class UserControllerIntegrationTest {
 
-    // khi tao test, no se init container len
     @Container
     static final MySQLContainer<?> MY_SQL_CONTAINER = new MySQLContainer<>("mysql:latest");
 
@@ -46,7 +45,6 @@ public class UserControllerIntegrationTest {
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "update");
     }
 
-    // mockMvc gọi tới api của mình
     @Autowired
     private MockMvc mockMvc;
 
@@ -54,7 +52,6 @@ public class UserControllerIntegrationTest {
     private UserResponse userResponse;
     private LocalDate dob;
 
-    // chay method nay truoc khi test
     @BeforeEach
     void initData() {
         dob = LocalDate.of(1990, 1, 1);
@@ -96,5 +93,3 @@ public class UserControllerIntegrationTest {
         log.info("Result: {}", response.andReturn().getResponse().getContentAsString());
     }
 }
-
-// unit test là mình biết được input và output sau khi chạy thì output đúng như mong muốn

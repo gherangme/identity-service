@@ -22,7 +22,6 @@ public class ApplicationInitConfig {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    // run khi app start len
     @Bean
     @ConditionalOnProperty(
             prefix = "spring",

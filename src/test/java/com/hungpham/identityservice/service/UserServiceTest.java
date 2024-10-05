@@ -117,5 +117,4 @@ public class UserServiceTest {
         Assertions.assertThat(exception.getErrorCode().getCode()).isEqualTo(1005);
     }
 
-    // khi viet unit test o layer nao, mock o layer duoi
 }

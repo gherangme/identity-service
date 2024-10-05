@@ -1,0 +1,15 @@
+GROUP,PACKAGE,CLASS,INSTRUCTION_MISSED,INSTRUCTION_COVERED,BRANCH_MISSED,BRANCH_COVERED,LINE_MISSED,LINE_COVERED,COMPLEXITY_MISSED,COMPLEXITY_COVERED,METHOD_MISSED,METHOD_COVERED
+identityservice,com.hungpham.identityservice,IdentityserviceApplication,5,3,0,0,2,1,1,1,1,1
+identityservice,com.hungpham.identityservice.service,PermissionService,36,13,0,0,7,2,3,2,3,2
+identityservice,com.hungpham.identityservice.service,UserService,86,95,0,2,15,15,6,6,6,5
+identityservice,com.hungpham.identityservice.service,RoleService,46,16,0,0,11,2,3,2,3,2
+identityservice,com.hungpham.identityservice.service,AuthenticationService,314,13,14,0,86,2,18,2,11,2
+identityservice,com.hungpham.identityservice.controller,PermissionController,22,10,0,0,8,2,3,2,3,2
+identityservice,com.hungpham.identityservice.controller,UserController,57,25,0,0,20,6,6,3,6,3
+identityservice,com.hungpham.identityservice.controller,AuthenticationController,37,6,0,0,15,1,4,1,4,1
+identityservice,com.hungpham.identityservice.controller,RoleController,22,10,0,0,8,2,3,2,3,2
+identityservice,com.hungpham.identityservice.validator,DobValidator,3,26,2,2,1,7,2,3,0,3
+identityservice,com.hungpham.identityservice.enums,Role,0,15,0,0,0,3,0,1,0,1
+identityservice,com.hungpham.identityservice.exception,GlobalExceptionHandler,55,69,1,1,19,18,4,4,3,4
+identityservice,com.hungpham.identityservice.exception,AppException,4,11,0,0,2,4,1,2,1,2
+identityservice,com.hungpham.identityservice.exception,ErrorCode,3,113,0,0,1,18,1,4,1,4

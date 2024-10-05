@@ -1,0 +1,4 @@
+com/hungpham/identityservice/controller/UserControllerTest.class
+com/hungpham/identityservice/service/UserServiceTest.class
+com/hungpham/identityservice/controller/UserControllerIntegrationTest.class
+com/hungpham/identityservice/IdentityserviceApplicationTests.class

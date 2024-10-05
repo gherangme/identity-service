@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AuthenticationController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">identityservice</a> &gt; <a href="index.source.html" class="el_package">com.hungpham.identityservice.controller</a> &gt; <span class="el_source">AuthenticationController.java</span></div><h1>AuthenticationController.java</h1><pre class="source lang-java linenums">package com.hungpham.identityservice.controller;
+
+import com.hungpham.identityservice.dto.request.LogoutRequest;
+import com.hungpham.identityservice.dto.request.RefresherRequest;
+import com.hungpham.identityservice.dto.response.ApiResponse;
+import com.hungpham.identityservice.dto.request.AuthenticationRequest;
+import com.hungpham.identityservice.dto.request.IntrospectRequest;
+import com.hungpham.identityservice.dto.response.AuthenticationResponse;
+import com.hungpham.identityservice.dto.response.IntrospectResponse;
+import com.hungpham.identityservice.service.AuthenticationService;
+import com.nimbusds.jose.JOSEException;
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.text.ParseException;
+
+@RestController
+@RequestMapping(&quot;/auth&quot;)
+<span class="fc" id="L24">@RequiredArgsConstructor</span>
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
+public class AuthenticationController {
+    AuthenticationService authenticationService;
+
+    @PostMapping(&quot;/token&quot;)
+    ApiResponse&lt;AuthenticationResponse&gt; authenticate(@RequestBody AuthenticationRequest request){
+<span class="nc" id="L31">        var result = authenticationService.authentication(request);</span>
+<span class="nc" id="L32">        return ApiResponse.&lt;AuthenticationResponse&gt;builder()</span>
+<span class="nc" id="L33">                .result(result)</span>
+<span class="nc" id="L34">                .build();</span>
+    }
+
+    @PostMapping(&quot;/introspect&quot;)
+    ApiResponse&lt;IntrospectResponse&gt; authenticate(@RequestBody IntrospectRequest request)
+            throws ParseException, JOSEException {
+<span class="nc" id="L40">        var result = authenticationService.introspect(request);</span>
+<span class="nc" id="L41">        return ApiResponse.&lt;IntrospectResponse&gt;builder()</span>
+<span class="nc" id="L42">                .result(result)</span>
+<span class="nc" id="L43">                .build();</span>
+    }
+
+    @PostMapping(&quot;/refresh&quot;)
+    ApiResponse&lt;AuthenticationResponse&gt; authenticate(@RequestBody RefresherRequest request)
+            throws ParseException, JOSEException {
+<span class="nc" id="L49">        var result = authenticationService.refresherToken(request);</span>
+<span class="nc" id="L50">        return ApiResponse.&lt;AuthenticationResponse&gt;builder()</span>
+<span class="nc" id="L51">                .result(result)</span>
+<span class="nc" id="L52">                .build();</span>
+    }
+
+    @PostMapping(&quot;/logout&quot;)
+    ApiResponse&lt;Void&gt; logout(@RequestBody LogoutRequest request)
+            throws ParseException, JOSEException {
+<span class="nc" id="L58">        authenticationService.logout(request);</span>
+<span class="nc" id="L59">        return ApiResponse.&lt;Void&gt;builder()</span>
+<span class="nc" id="L60">                .build();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

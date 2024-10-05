@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AuthenticationService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">identityservice</a> &gt; <a href="index.source.html" class="el_package">com.hungpham.identityservice.service</a> &gt; <span class="el_source">AuthenticationService.java</span></div><h1>AuthenticationService.java</h1><pre class="source lang-java linenums">package com.hungpham.identityservice.service;
+
+import com.hungpham.identityservice.dto.request.AuthenticationRequest;
+import com.hungpham.identityservice.dto.request.IntrospectRequest;
+import com.hungpham.identityservice.dto.request.LogoutRequest;
+import com.hungpham.identityservice.dto.request.RefresherRequest;
+import com.hungpham.identityservice.dto.response.AuthenticationResponse;
+import com.hungpham.identityservice.dto.response.IntrospectResponse;
+import com.hungpham.identityservice.entity.InvalidatedToken;
+import com.hungpham.identityservice.entity.User;
+import com.hungpham.identityservice.exception.AppException;
+import com.hungpham.identityservice.exception.ErrorCode;
+import com.hungpham.identityservice.mapper.InvalidatedTokenRepository;
+import com.hungpham.identityservice.repository.UserRepository;
+import com.nimbusds.jose.*;
+import com.nimbusds.jose.crypto.MACSigner;
+import com.nimbusds.jose.crypto.MACVerifier;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
+import lombok.experimental.NonFinal;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
+
+import java.text.ParseException;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Date;
+import java.util.Objects;
+import java.util.StringJoiner;
+import java.util.UUID;
+
+@Service
+<span class="fc" id="L40">@RequiredArgsConstructor</span>
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
+<span class="fc" id="L42">@Slf4j</span>
+public class AuthenticationService {
+    UserRepository userRepository;
+    InvalidatedTokenRepository invalidatedTokenRepository;
+
+    @NonFinal
+    @Value(&quot;${jwt.signerKey}&quot;)
+    protected String SIGNER_KEY;
+
+    @NonFinal
+    @Value(&quot;${jwt.valid-duration}&quot;)
+    protected long VALID_DURATION;
+
+    @NonFinal
+    @Value(&quot;${jwt.refreshable-duration}&quot;)
+    protected long REFRESHABLE_DURATION;
+
+    public IntrospectResponse introspect(IntrospectRequest request) throws JOSEException, ParseException {
+<span class="nc" id="L60">        var token = request.getToken();</span>
+<span class="nc" id="L61">        boolean isValid = true;</span>
+        try {
+<span class="nc" id="L63">            verifyToken(token, false);</span>
+<span class="nc" id="L64">        } catch (AppException e) {</span>
+<span class="nc" id="L65">            isValid = false;</span>
+<span class="nc" id="L66">        }</span>
+
+<span class="nc" id="L68">        return IntrospectResponse.builder()</span>
+<span class="nc" id="L69">                .valid(isValid)</span>
+<span class="nc" id="L70">                .build();</span>
+    }
+
+    public AuthenticationResponse authentication(AuthenticationRequest request){
+<span class="nc" id="L74">        var user = userRepository.findByUsername(request.getUsername())</span>
+<span class="nc" id="L75">                .orElseThrow(() -&gt; new AppException(ErrorCode.USER_NOT_EXISTED));</span>
+<span class="nc" id="L76">        PasswordEncoder passwordEncoder = new BCryptPasswordEncoder(10);</span>
+
+<span class="nc" id="L78">        boolean authenticated = passwordEncoder.matches(request.getPassword(), user.getPassword());</span>
+
+<span class="nc bnc" id="L80" title="All 2 branches missed.">        if (!authenticated)</span>
+<span class="nc" id="L81">            throw new AppException(ErrorCode.UNAUTHENTICATED);</span>
+
+<span class="nc" id="L83">        var token = generateToken(user);</span>
+
+<span class="nc" id="L85">        return AuthenticationResponse.builder()</span>
+<span class="nc" id="L86">                .token(token)</span>
+<span class="nc" id="L87">                .authenticated(true)</span>
+<span class="nc" id="L88">                .build();</span>
+    }
+
+    public void logout(LogoutRequest request) throws ParseException, JOSEException {
+        // check logout theo time refresh token
+        try {
+<span class="nc" id="L94">            var signToken = verifyToken(request.getToken(), true);</span>
+<span class="nc" id="L95">            String jit = signToken.getJWTClaimsSet().getJWTID();</span>
+<span class="nc" id="L96">            Date expiryTime = signToken.getJWTClaimsSet().getExpirationTime();</span>
+
+<span class="nc" id="L98">            InvalidatedToken invalidatedToken = InvalidatedToken.builder()</span>
+<span class="nc" id="L99">                    .id(jit)</span>
+<span class="nc" id="L100">                    .expiryTime(expiryTime)</span>
+<span class="nc" id="L101">                    .build();</span>
+
+<span class="nc" id="L103">            invalidatedTokenRepository.save(invalidatedToken);</span>
+<span class="nc" id="L104">        } catch (AppException exception) {</span>
+<span class="nc" id="L105">            log.info(&quot;Token has already expired&quot;);</span>
+<span class="nc" id="L106">        }</span>
+<span class="nc" id="L107">    }</span>
+
+    private SignedJWT verifyToken(String token, boolean isRefresh) throws JOSEException, ParseException {
+<span class="nc" id="L110">        JWSVerifier verifier = new MACVerifier(SIGNER_KEY.getBytes());</span>
+
+<span class="nc" id="L112">        SignedJWT signedJWT = SignedJWT.parse(token);</span>
+
+<span class="nc bnc" id="L114" title="All 2 branches missed.">        Date expiryTime = (isRefresh)</span>
+<span class="nc" id="L115">                ? new Date(signedJWT.getJWTClaimsSet().getIssueTime()</span>
+<span class="nc" id="L116">                        .toInstant().plus(Duration.ofSeconds(REFRESHABLE_DURATION)).toEpochMilli())</span>
+<span class="nc" id="L117">                : signedJWT.getJWTClaimsSet().getExpirationTime();</span>
+
+<span class="nc" id="L119">        var verified = signedJWT.verify(verifier);</span>
+
+<span class="nc bnc" id="L121" title="All 4 branches missed.">        if (!(verified &amp;&amp; expiryTime.after(new Date())))</span>
+<span class="nc" id="L122">            throw new AppException(ErrorCode.UNAUTHENTICATED);</span>
+
+<span class="nc" id="L124">        if (invalidatedTokenRepository</span>
+<span class="nc bnc" id="L125" title="All 2 branches missed.">                .existsById(signedJWT.getJWTClaimsSet().getJWTID()))</span>
+<span class="nc" id="L126">            throw new AppException(ErrorCode.UNAUTHENTICATED);</span>
+
+<span class="nc" id="L128">        return signedJWT;</span>
+    }
+
+    public AuthenticationResponse refresherToken(RefresherRequest request) throws ParseException, JOSEException {
+<span class="nc" id="L132">        var signJWT = verifyToken(request.getToken(), true);</span>
+<span class="nc" id="L133">        var jit = signJWT.getJWTClaimsSet().getJWTID();</span>
+<span class="nc" id="L134">        var expiryTime = signJWT.getJWTClaimsSet().getExpirationTime();</span>
+
+<span class="nc" id="L136">        InvalidatedToken invalidatedToken = InvalidatedToken.builder()</span>
+<span class="nc" id="L137">                .id(jit)</span>
+<span class="nc" id="L138">                .expiryTime(expiryTime)</span>
+<span class="nc" id="L139">                .build();</span>
+
+<span class="nc" id="L141">        invalidatedTokenRepository.save(invalidatedToken);</span>
+
+<span class="nc" id="L143">        var username = signJWT.getJWTClaimsSet().getSubject();</span>
+
+<span class="nc" id="L145">        var user = userRepository.findByUsername(username)</span>
+<span class="nc" id="L146">                .orElseThrow(() -&gt; new AppException(ErrorCode.UNAUTHENTICATED));</span>
+
+<span class="nc" id="L148">        var token = generateToken(user);</span>
+
+<span class="nc" id="L150">        return AuthenticationResponse.builder()</span>
+<span class="nc" id="L151">                .token(token)</span>
+<span class="nc" id="L152">                .authenticated(true)</span>
+<span class="nc" id="L153">                .build();</span>
+    }
+
+    private String generateToken(User user) {
+<span class="nc" id="L157">        JWSHeader header = new JWSHeader(JWSAlgorithm.HS512);</span>
+<span class="nc" id="L158">        JWTClaimsSet jwtClaimsSet = new JWTClaimsSet.Builder()</span>
+<span class="nc" id="L159">                .subject(user.getUsername())</span>
+<span class="nc" id="L160">                .issuer(&quot;hungpham&quot;) // xac dinh token dc issue tu ai</span>
+<span class="nc" id="L161">                .issueTime(new Date())</span>
+<span class="nc" id="L162">                .expirationTime(new Date(</span>
+<span class="nc" id="L163">                        Instant.now().plus(Duration.ofSeconds(VALID_DURATION)).toEpochMilli()</span>
+                ))
+<span class="nc" id="L165">                .jwtID(UUID.randomUUID().toString())</span>
+<span class="nc" id="L166">                .claim(&quot;scope&quot;, buildScope(user))</span>
+<span class="nc" id="L167">                .build();</span>
+
+<span class="nc" id="L169">        Payload payload = new Payload(jwtClaimsSet.toJSONObject());</span>
+
+<span class="nc" id="L171">        JWSObject jwsObject = new JWSObject(header, payload);</span>
+
+        try {
+<span class="nc" id="L174">            jwsObject.sign(new MACSigner(SIGNER_KEY.getBytes())); // khoá để ký và giải mã bằng nhau</span>
+<span class="nc" id="L175">            return jwsObject.serialize();</span>
+<span class="nc" id="L176">        } catch (JOSEException e) {</span>
+<span class="nc" id="L177">            throw new RuntimeException(e);</span>
+        }
+    }
+
+    private String buildScope(User user){
+<span class="nc" id="L182">        StringJoiner stringJoiner = new StringJoiner(&quot; &quot;);</span>
+<span class="nc bnc" id="L183" title="All 2 branches missed.">        if (!CollectionUtils.isEmpty(user.getRoles()))</span>
+<span class="nc" id="L184">            user.getRoles().forEach(role -&gt; {</span>
+<span class="nc" id="L185">                stringJoiner.add(&quot;ROLE_&quot; + role.getName());</span>
+<span class="nc bnc" id="L186" title="All 2 branches missed.">                if (!CollectionUtils.isEmpty(role.getPermissions()))</span>
+<span class="nc" id="L187">                    role.getPermissions()</span>
+<span class="nc" id="L188">                            .forEach(permission -&gt; stringJoiner.add(permission.getName()));</span>
+<span class="nc" id="L189">            });</span>
+
+<span class="nc" id="L191">        return stringJoiner.toString();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

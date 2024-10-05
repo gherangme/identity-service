@@ -1,0 +1,6 @@
+projectKey=hungpham.identity
+serverUrl=http://localhost:9000
+serverVersion=9.9.7.96285
+dashboardUrl=http://localhost:9000/dashboard?id=hungpham.identity
+ceTaskId=AZJTaj5KtiPo9T_e5QQ5
+ceTaskUrl=http://localhost:9000/api/ce/task?id=AZJTaj5KtiPo9T_e5QQ5

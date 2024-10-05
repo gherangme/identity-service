@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UserService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">identityservice</a> &gt; <a href="index.source.html" class="el_package">com.hungpham.identityservice.service</a> &gt; <span class="el_source">UserService.java</span></div><h1>UserService.java</h1><pre class="source lang-java linenums">package com.hungpham.identityservice.service;
+
+import com.hungpham.identityservice.constant.PredefinedRole;
+import com.hungpham.identityservice.entity.Role;
+import com.hungpham.identityservice.exception.ErrorCode;
+import com.hungpham.identityservice.dto.request.UserCreationRequest;
+import com.hungpham.identityservice.dto.request.UserUpdateRequest;
+import com.hungpham.identityservice.dto.response.UserResponse;
+import com.hungpham.identityservice.entity.User;
+import com.hungpham.identityservice.exception.AppException;
+import com.hungpham.identityservice.mapper.UserMapper;
+import com.hungpham.identityservice.repository.RoleRepository;
+import com.hungpham.identityservice.repository.UserRepository;
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.prepost.PostAuthorize;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+@Service
+<span class="fc" id="L29">@RequiredArgsConstructor</span>
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
+<span class="fc" id="L31">@Slf4j</span>
+public class UserService {
+
+    UserRepository userRepository;
+    RoleRepository roleRepository;
+    UserMapper userMapper;
+    PasswordEncoder passwordEncoder;
+
+    public UserResponse createUser(UserCreationRequest request) {
+<span class="fc" id="L40">        log.info(&quot;Service: create user&quot;);</span>
+<span class="fc bfc" id="L41" title="All 2 branches covered.">        if (userRepository.existsByUsername(request.getUsername())) throw new AppException(ErrorCode.USER_EXISTED);</span>
+
+<span class="fc" id="L43">        User user = userMapper.toUser(request);</span>
+<span class="fc" id="L44">        user.setPassword(passwordEncoder.encode(request.getPassword()));</span>
+
+<span class="fc" id="L46">        Set&lt;Role&gt; roles = new HashSet&lt;&gt;();</span>
+<span class="fc" id="L47">        roleRepository.findById(PredefinedRole.USER_ROLE).ifPresent(roles::add);</span>
+
+<span class="fc" id="L49">        user.setRoles(roles);</span>
+
+<span class="fc" id="L51">        return userMapper.toUserResponse(userRepository.save(user));</span>
+    }
+
+    public UserResponse getMyInfo(){
+<span class="fc" id="L55">        var context = SecurityContextHolder.getContext();</span>
+<span class="fc" id="L56">        String name = context.getAuthentication().getName();</span>
+<span class="fc" id="L57">        User user = userRepository.findByUsername(name)</span>
+<span class="fc" id="L58">                .orElseThrow(() -&gt; new AppException(ErrorCode.USER_NOT_EXISTED));</span>
+
+<span class="fc" id="L60">        return userMapper.toUserResponse(user);</span>
+    }
+
+    public UserResponse updateUser(String userId, UserUpdateRequest request){
+<span class="nc" id="L64">        User user = userRepository.findById(userId)</span>
+<span class="nc" id="L65">                .orElseThrow(() -&gt; new RuntimeException(&quot;User not found&quot;));</span>
+<span class="nc" id="L66">        userMapper.updateUser(user, request);</span>
+<span class="nc" id="L67">        user.setPassword(passwordEncoder.encode(request.getPassword()));</span>
+<span class="nc" id="L68">        var roles = roleRepository.findAllById(request.getRoles());</span>
+<span class="nc" id="L69">        user.setRoles(new HashSet&lt;&gt;(roles));</span>
+
+<span class="nc" id="L71">        return userMapper.toUserResponse(userRepository.save(user));</span>
+    }
+
+    public void deleteUser(String userId){
+<span class="nc" id="L75">        userRepository.deleteById(userId);</span>
+<span class="nc" id="L76">    }</span>
+
+    // kiem tra vai tro nguoi dung hien tai co phai la ADMIN khong, phai thi cho thuc thi ko tra ve 403
+    // hasRole sẽ mặc định thêm prefix ROLE_, thực tế là đang kiểm tra ROLE_ADMIN
+//    @PreAuthorize(&quot;hasRole('ADMIN')&quot;)
+    // hasRole sẽ tìm những thằng nào có prefix là ROLE_ + ADMIN
+    @PreAuthorize(&quot;hasAuthority('APPROVE_DATA')&quot;)
+    // Map đúng từng authority
+    public List&lt;UserResponse&gt; getUsers() {
+<span class="nc" id="L85">        log.info(&quot;In method get Users&quot;);</span>
+<span class="nc" id="L86">        return userRepository.findAll().stream()</span>
+<span class="nc" id="L87">                .map(userMapper::toUserResponse).toList();</span>
+    }
+
+    // PostAuthorize se get user tu user id
+    // @PostAuthorize((&quot;hasRole('ADMIN')&quot;))
+    @PostAuthorize(&quot;returnObject.username == authentication.name&quot;)
+    public UserResponse getUser(String id){
+<span class="nc" id="L94">        log.info(&quot;In method get user by id&quot;);</span>
+<span class="nc" id="L95">        return userMapper.toUserResponse(userRepository.findById(id)</span>
+<span class="nc" id="L96">                .orElseThrow(() -&gt; new RuntimeException(&quot;User not found&quot;)));</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
